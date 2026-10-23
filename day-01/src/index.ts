@@ -1,14 +1,14 @@
 // src/index.ts
-// Программын орох цэг (entry point). Өгөгдлөө уншиж, тооцоолол хийж, үр дүнг хэвлэнэ.
+// Программын орох цэг. Зөвхөн дуудлага + хэвлэлт.
+// Мөр шалгах логик бүхэлдээ inventory.ts-ийн parseItems дотор (Даалгавар 2).
 import {
-  parseItemLine,
+  parseItems,
   findLowStock,
   totalStockValue,
+  averageUnitPrice,
   quantityByCategory,
   findBySku,
-  ValidationError,
   CATEGORY_LABELS,
-  type Item,
 } from "./inventory.js"; // NodeNext горимд import дээр .js өргөтгөл ЗААВАЛ бичнэ
 
 // Бодит ажил дээр энэ өгөгдөл файл, database эсвэл API-аас ирнэ.
@@ -21,21 +21,7 @@ const rawLines = [
   "SKU-005, Jacket, clothes, 7, 120000, 2",     // "clothes" – буруу ангилал!
 ];
 
-const items: Item[] = [];
-const errors: string[] = [];
-
-for (const line of rawLines) {
-  try {
-    items.push(parseItemLine(line));
-  } catch (err) {
-    // catch дотор err нь unknown төрөлтэй – ямар алдаа болохыг заавал шалгана.
-    if (err instanceof ValidationError) {
-      errors.push(err.message);
-    } else {
-      throw err; // бидний таамаглаагүй алдаа бол нуулгүй цааш шиднэ
-    }
-  }
-}
+const { items, errors } = parseItems(rawLines);
 
 console.log(`Амжилттай уншсан: ${items.length} бараа, алдаатай: ${errors.length} мөр`);
 for (const e of errors) console.log("  ⚠ " + e);
@@ -46,6 +32,7 @@ for (const item of findLowStock(items)) {
 }
 
 console.log(`\nНийт нөөцийн үнэлгээ: ${totalStockValue(items).toLocaleString("mn-MN")} ₮`);
+console.log(`Дундаж нэгж үнэ: ${averageUnitPrice(items).toLocaleString("mn-MN")} ₮`);
 
 console.log("\nАнгилал тус бүрийн тоо:");
 for (const [category, qty] of quantityByCategory(items)) {

@@ -3,7 +3,7 @@
 // Pure функц = гадаад төлөв өөрчилдөггүй, ижил оролтод үргэлж ижил гаралт өгдөг.
 
 /** Бараа ямар ангилалд багтахыг хязгаарласан төрөл (literal union). */
-export type Category = "electronics" | "food" | "clothing";
+export type Category = "electronics" | "food" | "clothing" | "furniture";
 
 /** Нэг барааны бүтэц. readonly = үүсгэсний дараа өөрчлөхгүй. */
 export interface Item {
@@ -31,6 +31,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   electronics: "Электроник",
   food: "Хүнс",
   clothing: "Хувцас",
+  furniture: "Тавилга",
 };
 
 /** string утга Category мөн эсэхийг шалгаад, мөн бол төрлийг нарийсгана (type guard). */
@@ -75,6 +76,37 @@ export function parseItemLine(line: string): Item {
   return { sku, name, category, quantity, unitPrice, minQuantity };
 }
 
+/** parseItems-ийн буцаах утга: зөв мөрүүд ба алдааны тайлан хоёулаа. */
+export interface ParseResult {
+  readonly items: Item[];
+  readonly errors: string[];
+}
+
+/**
+ * Олон мөрийг нэг дор уншина (Даалгавар 2). Pure функц: оролтоо өөрчлөхгүй,
+ * console.log хийхгүй, зөвхөн үр дүн буцаана. Нэг мөр буруу байсан ч бусдыг
+ * үргэлжлүүлж уншина – импортын тайлангийн зарчим.
+ * Мөрийн дугаар 1-ээс эхэлнэ (хүн уншихад зориулсан).
+ */
+export function parseItems(lines: readonly string[]): ParseResult {
+  const items: Item[] = [];
+  const errors: string[] = [];
+
+  lines.forEach((line, i) => {
+    try {
+      items.push(parseItemLine(line));
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        errors.push(`Мөр ${i + 1}: ${err.message}`);
+      } else {
+        throw err; // таамаглаагүй алдааг нуухгүй
+      }
+    }
+  });
+
+  return { items, errors };
+}
+
 /** Нөөц нь доод хэмжээнээс бага барааг буцаана. */
 export function findLowStock(items: readonly Item[]): Item[] {
   return items.filter((item) => item.quantity < item.minQuantity);
@@ -83,6 +115,16 @@ export function findLowStock(items: readonly Item[]): Item[] {
 /** Агуулахад байгаа бүх барааны нийт үнэлгээ = Σ (тоо × нэгж үнэ). */
 export function totalStockValue(items: readonly Item[]): number {
   return items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+}
+
+/**
+ * Дундаж нэгж үнэ = Σ unitPrice / тоо (Даалгавар 1).
+ * Хоосон массив бол 0 буцаана: 0 / 0 = NaN гардаг тул guard заавал хэрэгтэй.
+ */
+export function averageUnitPrice(items: readonly Item[]): number {
+  if (items.length === 0) return 0;
+  const total = items.reduce((sum, item) => sum + item.unitPrice, 0);
+  return total / items.length;
 }
 
 /** Ангилал тус бүрийн тоо ширхэгийн нийлбэр. Map ашиглана: key = ангилал. */
